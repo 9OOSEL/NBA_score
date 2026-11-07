@@ -1,9 +1,11 @@
-"""NBA.com 공식 통계에서 1996-97 시즌부터 현재 시즌까지 정규시즌 선수 성적을 받아 docs/data.json을 만듭니다.
+"""NBA.com 공식 통계에서 정규시즌 선수 성적을 받아 docs/data.json을 갱신합니다.
 
-실행: python scripts/update_data.py
+평소: python scripts/update_data.py        (현재 시즌만 다시 받아 기존 데이터에 합침)
+전체: python scripts/update_data.py --all  (1996-97 시즌부터 전부 다시 받음)
 필요: pip install nba_api
 """
 import json
+import sys
 import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -40,7 +42,18 @@ def main():
     now = datetime.now(KST)
     seasons = [f"{y}-{(y + 1) % 100:02d}" for y in range(1996, current_start_year(now) + 1)]
     players = {}
+    refetch = set(seasons)
+    if "--all" not in sys.argv and OUT.exists():
+        old = json.loads(OUT.read_text(encoding="utf-8"))
+        cur = seasons[-1]
+        for pid, (name, rows) in old["players"].items():
+            keep = [r for r in rows if old["seasons"][r[0]] in seasons and old["seasons"][r[0]] != cur]
+            if keep:
+                players[pid] = [name, [[seasons.index(old["seasons"][r[0]])] + r[1:] for r in keep]]
+        refetch = {cur} | {s for s in seasons if s not in old["seasons"]}
     for si, s in enumerate(seasons):
+        if s not in refetch:
+            continue
         rs = fetch(s)
         h = rs["headers"]
         idx = [h.index(k) for k in KEYS]
@@ -51,6 +64,8 @@ def main():
         print(f"{s}: {len(rs['rowSet'])}명")
         time.sleep(1.5)
 
+    for v in players.values():
+        v[1].sort(key=lambda r: r[0])
     byname = {}
     for pid, (name, _) in players.items():
         byname.setdefault(name, pid)

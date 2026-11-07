@@ -1,9 +1,8 @@
 name: NBA 데이터 갱신
 
 on:
-  schedule:
-    - cron: "17 23 * * *"   # 매일 한국 시간 오전 8시 17분
-  workflow_dispatch:         # Actions 탭에서 수동 실행
+  # NBA.com이 GitHub 서버 접속을 막아서 자동 실행은 꺼 둠 (집 컴퓨터의 update.bat이 갱신 담당)
+  workflow_dispatch:
 
 permissions:
   contents: write
