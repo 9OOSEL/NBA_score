@@ -1,0 +1,212 @@
+<title>코트사이드 기록실</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+/* Layout: a scorer's-table sheet. Search bar on top, player header with career line, a points-per-game trend, then the full season-by-season box. */
+:root{
+  --bg:#f3f4f6; --surface:#ffffff; --ink:#151a24; --muted:#5d6577; --line:#dde1e8;
+  --accent:#d5561e; --accent-soft:#fbe8de; --best:#1d6b52; --best-soft:#e2f2ea;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#10141c; --surface:#181e29; --ink:#e9ecf2; --muted:#98a1b3; --line:#2a3242;
+  --accent:#f0773d; --accent-soft:#3a2418; --best:#5fcf9f; --best-soft:#173126; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10141c; --surface:#181e29; --ink:#e9ecf2; --muted:#98a1b3; --line:#2a3242;
+  --accent:#f0773d; --accent-soft:#3a2418; --best:#5fcf9f; --best-soft:#173126; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand h1{font-family:var(--display);font-weight:700;font-size:1.9rem;letter-spacing:.02em;margin:0;text-transform:uppercase}
+.brand h1 span{color:var(--accent)}
+.brand small{color:var(--muted);font-size:.8rem}
+.search{position:relative}
+.search input{width:100%;font:inherit;font-size:1.05rem;padding:14px 16px;border:2px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);outline:none}
+.search input:focus{border-color:var(--accent)}
+.results{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.15);z-index:5;max-height:360px;overflow-y:auto;list-style:none;margin:0;padding:6px}
+.results li button{all:unset;box-sizing:border-box;width:100%;display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:8px;cursor:pointer}
+.results li button:hover,.results li button.on{background:var(--accent-soft)}
+.results .yrs{color:var(--muted);font-size:.85rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+.results .empty{padding:12px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chips .lbl{font-size:.75rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-right:2px}
+.chip{font:inherit;font-size:.85rem;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.chip:focus-visible,.star:focus-visible,.results button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.head h2{font-family:var(--display);font-weight:700;font-size:2.4rem;line-height:1;margin:0;text-wrap:balance}
+.head .ko{color:var(--muted);font-size:.95rem;margin-top:4px}
+.meta{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--muted);font-size:.88rem;margin-top:8px}
+.meta b{color:var(--ink);font-weight:600}
+.star{font:inherit;font-size:.85rem;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.star[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.career{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.career div{background:var(--surface);padding:10px 12px}
+.career .k{font-size:.72rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.career .v{font-family:var(--display);font-size:1.9rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.sec-t{font-size:.78rem;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin:0 0 8px}
+.metric-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.metric-tabs button{font:inherit;font-size:.8rem;padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer}
+.metric-tabs button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.chart svg{width:100%;height:auto;display:block}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.86rem}
+th,td{padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{font-weight:600;color:var(--muted);font-size:.74rem;letter-spacing:.04em;background:var(--bg);position:sticky;top:0}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface)}
+th:first-child{background:var(--bg)}
+tbody tr:last-child td{border-bottom:none}
+tfoot td{font-weight:600;background:var(--bg);border-top:2px solid var(--line);border-bottom:none}
+tfoot td:first-child{background:var(--bg)}
+td.best{color:var(--best);font-weight:600;background:var(--best-soft)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--best-soft);border:1px solid var(--best);margin-right:6px;vertical-align:-1px}
+footer{color:var(--muted);font-size:.78rem;line-height:1.6}
+@media (max-width:560px){
+  .career{grid-template-columns:repeat(3,1fr)}
+  .head h2{font-size:2rem}
+  .brand h1{font-size:1.6rem}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="brand">
+    <h1>Courtside <span>Ledger</span></h1>
+    <small id="upd"></small>
+  </header>
+
+  <div class="search">
+    <input id="q" type="search" autocomplete="off" placeholder="선수 이름 검색 (예: curry, 커리, 르브론)" aria-label="선수 이름 검색">
+    <ul class="results" id="res" hidden></ul>
+  </div>
+
+  <div class="chips" id="favs"></div>
+
+  <main class="card" id="card"></main>
+
+  <footer>
+    데이터: NBA.com 공식 통계, 정규시즌 경기당 평균. 1996-97 시즌부터 수록, 이번 시즌은 진행 중 기록이에요.
+    시즌 중 트레이드된 선수는 그 시즌 마지막 팀으로 표시되고, 기록은 전체 팀 합산이에요.
+    커리어 득점·리바운드·어시스트는 경기 수로 가중한 평균, 3점 성공률은 성공÷시도로 계산했어요.
+  </footer>
+</div>
+
+<script>
+fetch("data.json",{cache:"no-cache"}).then(r=>r.json()).then(D=>{window.NBA=D;start()}).catch(()=>{document.getElementById("card").textContent="데이터를 불러오지 못했어요. 잠시 후 새로고침해 주세요."});
+function start(){
+const D=window.NBA, S=D.seasons, P=D.players, KO=D.ko;
+// row: [seasonIdx, team, age, gp, min, pts, reb, ast, stl, blk, tov, fg, 3pm, 3p, ft]
+const COLS=[
+ {k:'시즌',f:r=>S[r[0]]},{k:'팀',i:1},{k:'나이',i:2},{k:'경기',i:3,best:1},{k:'출전',i:4,d:1,best:1},
+ {k:'득점',i:5,d:1,best:1},{k:'리바',i:6,d:1,best:1},{k:'어시',i:7,d:1,best:1},{k:'스틸',i:8,d:1,best:1},
+ {k:'블록',i:9,d:1,best:1},{k:'턴오버',i:10,d:1},{k:'FG%',i:11,p:1,best:1,min:20},{k:'3P 성공',i:12,d:1,best:1},
+ {k:'3P%',i:13,p:1,best:1,min:20},{k:'FT%',i:14,p:1,best:1,min:20}];
+const METRICS=[{k:'득점',i:5},{k:'리바운드',i:6},{k:'어시스트',i:7},{k:'3P 성공',i:12}];
+const $=id=>document.getElementById(id);
+const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9가-힣]/g,'');
+const index=Object.entries(P).map(([id,[name,rows]])=>({id,name,ko:KO[id]||'',n:norm(name),nk:norm(KO[id]||''),
+  from:S[rows[0][0]],to:S[rows[rows.length-1][0]],last:rows[rows.length-1][0],gp:rows.reduce((a,r)=>a+r[3],0)}));
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let favs=store.get('nba-favs',[]), metric=0, current=null, hi=-1, hits=[];
+$('upd').textContent='데이터 기준 '+D.updated.replace(/-/g,'.');
+
+const fmt=(v,c)=>v==null?'–':c.p?(v*100).toFixed(1):c.d?Number(v).toFixed(1):v;
+const yr=s=>s.slice(0,4);
+function search(q){
+  const n=norm(q); if(!n) return [];
+  return index.filter(p=>p.n.includes(n)||(p.nk&&p.nk.includes(n)))
+    .sort((a,b)=>{const as=a.n.startsWith(n)||a.nk.startsWith(n)||norm(a.name.split(' ').slice(-1)[0]).startsWith(n),bs=b.n.startsWith(n)||b.nk.startsWith(n)||norm(b.name.split(' ').slice(-1)[0]).startsWith(n);
+      return (bs-as)||(b.last-a.last)||(b.gp-a.gp)}).slice(0,12);
+}
+function showResults(){
+  const ul=$('res'); const q=$('q').value.trim();
+  if(!q){ul.hidden=true;return}
+  hits=search(q); hi=hits.length?0:-1;
+  ul.innerHTML=hits.length?hits.map((p,i)=>`<li><button data-id="${p.id}" class="${i===hi?'on':''}"><span>${esc(p.name)}${p.ko?` <span class="yrs">${esc(p.ko)}</span>`:''}</span><span class="yrs">${yr(p.from)}–${yr(p.to)}</span></button></li>`).join('')
+    :`<li class="empty">'${esc(q)}'와 맞는 선수가 없어요. 영문 이름 일부로 다시 검색해 보세요.</li>`;
+  ul.hidden=false;
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+$('q').addEventListener('input',showResults);
+$('q').addEventListener('keydown',e=>{
+  const ul=$('res'); if(ul.hidden) return;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();hi=(hi+(e.key==='ArrowDown'?1:-1)+hits.length)%hits.length;
+    ul.querySelectorAll('button').forEach((b,i)=>b.classList.toggle('on',i===hi))}
+  else if(e.key==='Enter'&&hits[hi]){open(hits[hi].id)}
+  else if(e.key==='Escape'){ul.hidden=true}
+});
+$('res').addEventListener('click',e=>{const b=e.target.closest('button[data-id]');if(b)open(b.dataset.id)});
+document.addEventListener('click',e=>{if(!e.target.closest('.search'))$('res').hidden=true});
+
+function open(id){
+  $('q').value='';$('res').hidden=true;
+  if(location.hash!=='#p'+id) location.hash='p'+id; else render(id);
+}
+window.addEventListener('hashchange',route);
+function route(){const m=location.hash.match(/^#p(\d+)$/);render(m&&P[m[1]]?m[1]:'201939')}
+
+function career(rows){
+  const gp=rows.reduce((a,r)=>a+r[3],0), w=i=>gp?rows.reduce((a,r)=>a+r[i]*r[3],0)/gp:0;
+  const m3=rows.reduce((a,r)=>a+r[12]*r[3],0), a3=rows.reduce((a,r)=>a+(r[13]>0?r[12]*r[3]/r[13]:0),0);
+  return {gp,pts:w(5),reb:w(6),ast:w(7),stl:w(8),blk:w(9),min:w(4),tov:w(10),fg:w(11),m3:w(12),p3:a3?m3/a3:null,ft:w(14)};
+}
+function render(id){
+  current=id; const [name,rows]=P[id]; const c=career(rows); const last=rows[rows.length-1];
+  const teams=[...new Set(rows.map(r=>r[1]))];
+  const isFav=favs.includes(id);
+  const best={};COLS.forEach(col=>{if(col.best){const pool=rows.filter(r=>!col.min||r[3]>=col.min);if(pool.length>1){best[col.i]=Math.max(...pool.map(r=>r[col.i]||0))}}});
+  $('card').innerHTML=`
+   <div class="head"><div>
+     <h2>${esc(name)}</h2>${KO[id]?`<div class="ko">${esc(KO[id])}</div>`:''}
+     <div class="meta"><span>최근 소속 <b>${last[1]}</b></span><span>기록 <b>${S[rows[0][0]]} ~ ${S[last[0]]}</b></span><span><b>${rows.length}</b>시즌 · <b>${c.gp.toLocaleString()}</b>경기</span><span>거친 팀 <b>${teams.join(' · ')}</b></span></div>
+   </div><button class="star" id="star" aria-pressed="${isFav}">${isFav?'★ 즐겨찾기됨':'☆ 즐겨찾기'}</button></div>
+   <div><p class="sec-t">커리어 평균</p><div class="career">
+     <div><div class="k">득점</div><div class="v">${c.pts.toFixed(1)}</div></div>
+     <div><div class="k">리바운드</div><div class="v">${c.reb.toFixed(1)}</div></div>
+     <div><div class="k">어시스트</div><div class="v">${c.ast.toFixed(1)}</div></div>
+     <div><div class="k">3P 성공</div><div class="v">${c.m3.toFixed(1)}</div></div>
+     <div><div class="k">3P%</div><div class="v">${c.p3==null?'–':(c.p3*100).toFixed(1)}</div></div>
+   </div></div>
+   <div class="chart"><p class="sec-t">시즌별 추이</p><div class="metric-tabs" id="mtabs">${METRICS.map((m,i)=>`<button data-m="${i}" aria-pressed="${i===metric}">${m.k}</button>`).join('')}</div><div id="svg"></div></div>
+   <div><p class="sec-t">시즌별 기록 (경기당)</p>
+   <div class="tbl"><table><thead><tr>${COLS.map(col=>`<th>${col.k}</th>`).join('')}</tr></thead><tbody>
+   ${rows.slice().reverse().map(r=>`<tr>${COLS.map(col=>{const v=col.f?col.f(r):r[col.i];const b=col.best&&best[col.i]!=null&&r[col.i]===best[col.i]&&(!col.min||r[3]>=col.min);return `<td class="${b?'best':''}">${col.f?v:fmt(v,col)}</td>`}).join('')}</tr>`).join('')}
+   </tbody><tfoot><tr><td>커리어</td><td></td><td></td><td>${c.gp}</td><td>${c.min.toFixed(1)}</td><td>${c.pts.toFixed(1)}</td><td>${c.reb.toFixed(1)}</td><td>${c.ast.toFixed(1)}</td><td>${c.stl.toFixed(1)}</td><td>${c.blk.toFixed(1)}</td><td>${c.tov.toFixed(1)}</td><td>${(c.fg*100).toFixed(1)}</td><td>${c.m3.toFixed(1)}</td><td>${c.p3==null?'–':(c.p3*100).toFixed(1)}</td><td>${(c.ft*100).toFixed(1)}</td></tr></tfoot></table></div>
+   <div class="legend" style="margin-top:8px"><span><i></i>커리어 최고 시즌 (성공률은 20경기 이상 시즌만 비교)</span></div></div>`;
+  $('star').onclick=()=>{favs=favs.includes(id)?favs.filter(x=>x!==id):[id,...favs].slice(0,12);store.set('nba-favs',favs);render(id);renderFavs()};
+  $('mtabs').onclick=e=>{const b=e.target.closest('button[data-m]');if(!b)return;metric=+b.dataset.m;render(id)};
+  drawChart(rows);
+  document.title=name+' · 코트사이드 기록실';
+}
+function drawChart(rows){
+  const m=METRICS[metric], W=640,H=220,L=36,R=14,T=16,B=30, vals=rows.map(r=>r[m.i]);
+  const max=Math.max(1,...vals); const step=max>20?10:max>8?4:max>4?2:1; const top=Math.ceil(max/step)*step;
+  const n=rows.length, x=i=>n===1?L+(W-L-R)/2:L+i*(W-L-R)/(n-1), y=v=>T+(H-T-B)*(1-v/top);
+  const bi=vals.indexOf(Math.max(...vals));
+  let g='';for(let v=0;v<=top;v+=step){g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${v}</text>`}
+  const pts=rows.map((r,i)=>`${x(i)},${y(r[m.i])}`).join(' ');
+  const area=`${x(0)},${y(0)} ${pts} ${x(n-1)},${y(0)}`;
+  const every=Math.ceil(n/8); let lab='';rows.forEach((r,i)=>{if(i%every===0||i===n-1)lab+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="11" fill="var(--muted)">'${S[r[0]].slice(2,4)}</text>`});
+  $('svg').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="시즌별 ${m.k} 추이">${g}
+   <polygon points="${area}" fill="var(--accent)" opacity=".12"/>
+   <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>
+   ${rows.map((r,i)=>`<circle cx="${x(i)}" cy="${y(r[m.i])}" r="${i===bi?5:3}" fill="${i===bi?'var(--accent)':'var(--surface)'}" stroke="var(--accent)" stroke-width="2"><title>${S[r[0]]} ${m.k} ${Number(r[m.i]).toFixed(1)}</title></circle>`).join('')}
+   <text x="${Math.min(Math.max(x(bi),L+30),W-R-30)}" y="${y(vals[bi])-10}" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)">${Number(vals[bi]).toFixed(1)}</text>
+   ${lab}</svg>`;
+}
+function renderFavs(){
+  const box=$('favs');
+  const quick=['201939','2544','201142','203999','1629029'].filter(x=>P[x]&&!favs.includes(x));
+  box.innerHTML=(favs.length?`<span class="lbl">즐겨찾기</span>`+favs.filter(x=>P[x]).map(x=>`<button class="chip" data-id="${x}">${esc(KO[x]||P[x][0])}</button>`).join(''):'')+
+    `<span class="lbl">${favs.length?'추천':'바로 보기'}</span>`+quick.slice(0,favs.length?3:5).map(x=>`<button class="chip" data-id="${x}">${esc(KO[x]||P[x][0])}</button>`).join('');
+}
+$('favs').addEventListener('click',e=>{const b=e.target.closest('[data-id]');if(b)open(b.dataset.id)});
+renderFavs(); route();
+}
+</script>
