@@ -82,7 +82,7 @@ footer{color:var(--muted);font-size:.78rem;line-height:1.6}
   </header>
 
   <div class="search">
-    <input id="q" type="search" autocomplete="off" placeholder="선수 이름 검색 (예: curry, 커리, 르브론)" aria-label="선수 이름 검색">
+    <input id="q" type="search" autocomplete="off" placeholder="선수 이름 검색 (예: 커리, 르브론, ㅇㅋㅊ, curry)" aria-label="선수 이름 검색">
     <ul class="results" id="res" hidden></ul>
   </div>
 
@@ -100,7 +100,7 @@ footer{color:var(--muted);font-size:.78rem;line-height:1.6}
 <script>
 fetch("data.json",{cache:"no-cache"}).then(r=>r.json()).then(D=>{window.NBA=D;start()}).catch(()=>{document.getElementById("card").textContent="데이터를 불러오지 못했어요. 잠시 후 새로고침해 주세요."});
 function start(){
-const D=window.NBA, S=D.seasons, P=D.players, KO=D.ko;
+const D=window.NBA, S=D.seasons, P=D.players, KOALL=D.ko, KO=Object.fromEntries(Object.entries(KOALL).map(([k,v])=>[k,v.split('/')[0]]));
 // row: [seasonIdx, team, age, gp, min, pts, reb, ast, stl, blk, tov, fg, 3pm, 3p, ft]
 const COLS=[
  {k:'시즌',f:r=>S[r[0]]},{k:'팀',i:1},{k:'나이',i:2},{k:'경기',i:3,best:1},{k:'출전',i:4,d:1,best:1},
@@ -109,8 +109,13 @@ const COLS=[
  {k:'3P%',i:13,p:1,best:1,min:20},{k:'FT%',i:14,p:1,best:1,min:20}];
 const METRICS=[{k:'득점',i:5},{k:'리바운드',i:6},{k:'어시스트',i:7},{k:'3P 성공',i:12}];
 const $=id=>document.getElementById(id);
-const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9가-힣]/g,'');
-const index=Object.entries(P).map(([id,[name,rows]])=>({id,name,ko:KO[id]||'',n:norm(name),nk:norm(KO[id]||''),
+const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+// 한글: 자모로 풀고 헷갈리기 쉬운 모음(ㅐ/ㅔ, ㅒ/ㅖ, ㅙ/ㅚ/ㅞ)을 하나로 묶어 비교
+const CHO='ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ',JUNG='ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ',JONG=['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+const VMAP={'ㅐ':'ㅔ','ㅒ':'ㅖ','ㅙ':'ㅞ','ㅚ':'ㅞ'};
+const jamo=s=>{let o='';for(const ch of s){const c=ch.charCodeAt(0)-0xAC00;if(c>=0&&c<11172){const j=JUNG[(c%588)/28|0];o+=CHO[c/588|0]+(VMAP[j]||j)+JONG[c%28]}else if(/[ㄱ-ㅣ]/.test(ch))o+=VMAP[ch]||ch}return o};
+const cho=s=>{let o='';for(const ch of s){const c=ch.charCodeAt(0)-0xAC00;if(c>=0&&c<11172)o+=CHO[c/588|0]}return o};
+const index=Object.entries(P).map(([id,[name,rows]])=>({id,name,ko:KO[id]||'',n:norm(name),nks:(KOALL[id]||'').split('/').filter(Boolean).map(x=>jamo(x.replace(/\s/g,''))),nc:(KOALL[id]||'').split('/').map(cho).join('|'),nl:(KOALL[id]||'').split('/').map(x=>x.split(' ').slice(-1)[0]),
   from:S[rows[0][0]],to:S[rows[rows.length-1][0]],last:rows[rows.length-1][0],gp:rows.reduce((a,r)=>a+r[3],0)}));
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 let favs=store.get('nba-favs',[]), metric=0, current=null, hi=-1, hits=[];
@@ -119,17 +124,19 @@ $('upd').textContent='데이터 기준 '+D.updated.replace(/-/g,'.');
 const fmt=(v,c)=>v==null?'–':c.p?(v*100).toFixed(1):c.d?Number(v).toFixed(1):v;
 const yr=s=>s.slice(0,4);
 function search(q){
-  const n=norm(q); if(!n) return [];
-  return index.filter(p=>p.n.includes(n)||(p.nk&&p.nk.includes(n)))
-    .sort((a,b)=>{const as=a.n.startsWith(n)||a.nk.startsWith(n)||norm(a.name.split(' ').slice(-1)[0]).startsWith(n),bs=b.n.startsWith(n)||b.nk.startsWith(n)||norm(b.name.split(' ').slice(-1)[0]).startsWith(n);
-      return (bs-as)||(b.last-a.last)||(b.gp-a.gp)}).slice(0,12);
+  const raw=q.replace(/\s/g,''); if(!raw) return [];
+  let test, starts;
+  if(/^[ㄱ-ㅎ]+$/.test(raw)){test=p=>p.nc.includes(raw);starts=p=>p.nc.split('|').some(x=>x.startsWith(raw))}
+  else if(/[ㄱ-ㅣ가-힣]/.test(raw)){const k=jamo(raw);test=p=>p.nks.some(x=>x.includes(k));starts=p=>p.nks.some(x=>x.startsWith(k))||p.nl.some(x=>jamo(x).startsWith(k))}
+  else{const n=norm(raw);if(!n)return[];test=p=>p.n.includes(n)||(KOALL[p.id]||'').toLowerCase().split('/').some(x=>x.replace(/\s/g,'')===n);starts=p=>p.n.startsWith(n)||norm(p.name.split(' ').slice(-1)[0]).startsWith(n)}
+  return index.filter(test).sort((a,b)=>(starts(b)-starts(a))||(b.last-a.last)||(b.gp-a.gp)).slice(0,12);
 }
 function showResults(){
   const ul=$('res'); const q=$('q').value.trim();
   if(!q){ul.hidden=true;return}
   hits=search(q); hi=hits.length?0:-1;
   ul.innerHTML=hits.length?hits.map((p,i)=>`<li><button data-id="${p.id}" class="${i===hi?'on':''}"><span>${esc(p.name)}${p.ko?` <span class="yrs">${esc(p.ko)}</span>`:''}</span><span class="yrs">${yr(p.from)}–${yr(p.to)}</span></button></li>`).join('')
-    :`<li class="empty">'${esc(q)}'와 맞는 선수가 없어요. 영문 이름 일부로 다시 검색해 보세요.</li>`;
+    :`<li class="empty">'${esc(q)}'와 맞는 선수가 없어요. 성만 입력하거나 영문 이름으로 검색해 보세요.</li>`;
   ul.hidden=false;
 }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}

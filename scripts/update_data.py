@@ -66,10 +66,10 @@ def main():
 
     for v in players.values():
         v[1].sort(key=lambda r: r[0])
-    byname = {}
-    for pid, (name, _) in players.items():
-        byname.setdefault(name, pid)
-    ko = {byname[en]: k for en, k in KO.items() if en in byname}
+    ko = {pid: KO[name] for pid, (name, _) in players.items() if name in KO}
+    new = sorted({name for name, _ in players.values() if name not in KO})
+    if new:
+        print("한글 이름이 없는 선수 (scripts/ko_names.json에 추가하면 한글 검색 가능):", ", ".join(new))
 
     out = {"seasons": seasons, "players": players, "ko": ko, "updated": now.strftime("%Y-%m-%d")}
     OUT.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
