@@ -54,9 +54,23 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15p
 .metric-tabs button{font:inherit;font-size:.8rem;padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer}
 .metric-tabs button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
 .chart svg{width:100%;height:auto;display:block}
+.seasons{container-type:inline-size}
 .tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+.stack{display:none;border:1px solid var(--line);border-radius:10px;overflow:hidden;font-variant-numeric:tabular-nums}
+.sk-g,.sk-legend{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));text-align:center}
+.sk-legend{background:var(--bg);color:var(--muted);font-size:.7rem;font-weight:600;letter-spacing:.03em;padding:6px 4px;border-bottom:1px solid var(--line);row-gap:2px}
+.sk{padding:8px 4px 6px;border-bottom:1px solid var(--line)}
+.sk:last-child{border-bottom:none}
+.sk-h{font-size:.8rem;color:var(--muted);padding:0 6px 4px}
+.sk-h b{color:var(--ink);font-weight:600;margin-right:4px}
+.sk-g{font-size:.9rem;row-gap:2px}
+.sk-g span{padding:2px 0;border-radius:4px}
+.sk-g span.best{color:var(--best);font-weight:600;background:var(--best-soft)}
+.sk.sk-total{background:var(--bg)}
+.sk.sk-total .sk-g{font-weight:600}
+@container (max-width:700px){.tbl{display:none}.stack{display:block}}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.86rem}
-th,td{padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th,td{padding:7px 7px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
 th{font-weight:600;color:var(--muted);font-size:.74rem;letter-spacing:.04em;background:var(--bg);position:sticky;top:0}
 th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface)}
 th:first-child{background:var(--bg)}
@@ -181,10 +195,13 @@ function render(id){
      <div><div class="k">3P%</div><div class="v">${c.p3==null?'–':(c.p3*100).toFixed(1)}</div></div>
    </div></div>
    <div class="chart"><p class="sec-t">시즌별 추이</p><div class="metric-tabs" id="mtabs">${METRICS.map((m,i)=>`<button data-m="${i}" aria-pressed="${i===metric}">${m.k}</button>`).join('')}</div><div id="svg"></div></div>
-   <div><p class="sec-t">시즌별 기록 (경기당)</p>
+   <div class="seasons"><p class="sec-t">시즌별 기록 (경기당)</p>
    <div class="tbl"><table><thead><tr>${COLS.map(col=>`<th>${col.k}</th>`).join('')}</tr></thead><tbody>
    ${rows.slice().reverse().map(r=>`<tr>${COLS.map(col=>{const v=col.f?col.f(r):r[col.i];const b=col.best&&best[col.i]!=null&&r[col.i]===best[col.i]&&(!col.min||r[3]>=col.min);return `<td class="${b?'best':''}">${col.f?v:fmt(v,col)}</td>`}).join('')}</tr>`).join('')}
    </tbody><tfoot><tr><td>커리어</td><td></td><td></td><td>${c.gp}</td><td>${c.min.toFixed(1)}</td><td>${c.pts.toFixed(1)}</td><td>${c.reb.toFixed(1)}</td><td>${c.ast.toFixed(1)}</td><td>${c.stl.toFixed(1)}</td><td>${c.blk.toFixed(1)}</td><td>${c.tov.toFixed(1)}</td><td>${(c.fg*100).toFixed(1)}</td><td>${c.m3.toFixed(1)}</td><td>${c.p3==null?'–':(c.p3*100).toFixed(1)}</td><td>${(c.ft*100).toFixed(1)}</td></tr></tfoot></table></div>
+   <div class="stack"><div class="sk-legend"><span>득점</span><span>리바</span><span>어시</span><span>스틸</span><span>블록</span><span>턴오버</span><span>FG%</span><span>3P 성공</span><span>3P%</span><span>FT%</span></div>
+   ${rows.slice().reverse().map(r=>`<div class="sk"><div class="sk-h"><b>${S[r[0]]}</b>${r[1]} · ${r[2]==null?'':r[2]+'세 · '}${r[3]}경기 · ${Number(r[4]).toFixed(1)}분</div><div class="sk-g">${[5,6,7,8,9,10,11,12,13,14].map(i=>{const col=COLS.find(c=>c.i===i);const b=col.best&&best[i]!=null&&r[i]===best[i]&&(!col.min||r[3]>=col.min);return `<span class="${b?'best':''}">${fmt(r[i],col)}</span>`}).join('')}</div></div>`).join('')}
+   <div class="sk sk-total"><div class="sk-h"><b>커리어</b>${rows.length}시즌 · ${c.gp}경기 · ${c.min.toFixed(1)}분</div><div class="sk-g">${[c.pts,c.reb,c.ast,c.stl,c.blk,c.tov].map(v=>`<span>${v.toFixed(1)}</span>`).join('')}<span>${(c.fg*100).toFixed(1)}</span><span>${c.m3.toFixed(1)}</span><span>${c.p3==null?'–':(c.p3*100).toFixed(1)}</span><span>${(c.ft*100).toFixed(1)}</span></div></div></div>
    <div class="legend" style="margin-top:8px"><span><i></i>커리어 최고 시즌 (성공률은 20경기 이상 시즌만 비교)</span></div></div>`;
   $('star').onclick=()=>{favs=favs.includes(id)?favs.filter(x=>x!==id):[id,...favs].slice(0,12);store.set('nba-favs',favs);render(id);renderFavs()};
   $('mtabs').onclick=e=>{const b=e.target.closest('button[data-m]');if(!b)return;metric=+b.dataset.m;render(id)};
