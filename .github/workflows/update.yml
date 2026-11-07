@@ -1,11 +1,16 @@
 name: NBA 데이터 갱신
 
 on:
-  # NBA.com이 GitHub 서버 접속을 막아서 자동 실행은 꺼 둠 (집 컴퓨터의 update.bat이 갱신 담당)
-  workflow_dispatch:
+  schedule:
+    - cron: "17 7 * * *"   # 매일 한국 시간 오후 4시 17분 (미국 경기가 모두 끝난 뒤)
+  workflow_dispatch:        # Actions 탭에서 수동 실행
 
 permissions:
   contents: write
+
+concurrency:
+  group: data-update
+  cancel-in-progress: false
 
 jobs:
   update:
@@ -16,12 +21,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install nba_api
-      - run: python scripts/update_data.py
+      - run: pip install requests
+      - run: python scripts/update_cdn.py
       - name: 바뀐 데이터 커밋
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898900+github-actions[bot]@users.noreply.github.com"
-          git add docs/data.json
-          git diff --cached --quiet || git commit -m "데이터 갱신 $(date -u +%F)"
+          git add docs/data.json data/
+          git diff --cached --quiet || git commit -m "데이터 갱신 $(TZ=Asia/Seoul date +%F)"
           git push
